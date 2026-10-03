@@ -8,18 +8,110 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─────────────────────────────────────────────
+// LOCALES
+// ─────────────────────────────────────────────
+
 model Locale {
-  id               Int      @id @default(autoincrement())
-  codeIso          String   @unique @map("code_iso") @db.VarChar(10)
-  nativeName       String   @map("native_name") @db.VarChar(100)
-  englishName      String   @map("english_name") @db.VarChar(100)
-  flag             String?  @db.VarChar(10)
-  isDefault        Boolean  @default(false) @map("is_default")
-  isActive         Boolean  @default(true) @map("is_active")
-  completionStatus Decimal  @default(0) @map("completion_status") @db.Decimal(5, 2)
-  displayOrder     Int      @default(0) @map("display_order")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id           Int      @id @default(autoincrement())
+  codeIso      String   @unique @map("code_iso") @db.VarChar(10)
+  nativeName   String   @map("native_name") @db.VarChar(100)
+  englishName  String   @map("english_name") @db.VarChar(100)
+  flag         String?  @db.VarChar(10)
+  isDefault    Boolean  @default(false) @map("is_default")
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  values TranslationValue[]
 
   @@map("locales")
+}
+
+// ─────────────────────────────────────────────
+// TRADUCCIONES
+// ─────────────────────────────────────────────
+
+model TranslationSchema {
+  id          Int      @id @default(autoincrement())
+  namespace   String   @unique @db.VarChar(100)  // "HomePage", "AboutPage", "Common"
+  displayName String   @map("display_name") @db.VarChar(150)  // "Página de inicio"
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  keys TranslationKey[]
+
+  @@map("translation_schemas")
+}
+
+model TranslationKey {
+  id        Int      @id @default(autoincrement())
+  schemaId  Int      @map("schema_id")
+  key       String   @db.VarChar(255)  // "heroBadge", "heroTitleLine1"
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  schema TranslationSchema  @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+  values TranslationValue[]
+
+  @@unique([schemaId, key])
+  @@map("translation_keys")
+}
+
+enum TranslationStatus {
+  PENDING
+  TRANSLATED
+  OUTDATED
+}
+
+model TranslationValue {
+  id            Int               @id @default(autoincrement())
+  keyId         Int               @map("key_id")
+  localeId      Int               @map("locale_id")
+  value         String?           @db.Text
+  status        TranslationStatus @default(PENDING)
+  isAiGenerated Boolean           @default(false) @map("is_ai_generated")
+  translatedAt  DateTime?         @map("translated_at") @db.Timestamptz
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  key    TranslationKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  locale Locale         @relation(fields: [localeId], references: [id], onDelete: Cascade)
+
+  @@unique([keyId, localeId])
+  @@map("translation_values")
+}
+
+// ─────────────────────────────────────────────
+// IA
+// ─────────────────────────────────────────────
+
+model AiConfig {
+  id           Int      @id @default(autoincrement())
+  provider     String   @db.VarChar(50)
+  apiKey       String   @map("api_key") @db.Text  // encriptado con AES-256-GCM
+  model        String   @db.VarChar(100)
+  enabledTasks Json     @map("enabled_tasks")
+  monthlyLimit Decimal? @map("monthly_limit") @db.Decimal(10, 2)
+  monthlySpent Decimal  @default(0) @map("monthly_spent") @db.Decimal(10, 2)
+  isActive     Boolean  @default(true) @map("is_active")
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("ai_config")
+}
+
+// ─────────────────────────────────────────────
+// AUDITORÍA
+// ─────────────────────────────────────────────
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   Int?     @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@map("activity_log")
 }
