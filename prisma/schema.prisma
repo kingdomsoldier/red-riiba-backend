@@ -1,0 +1,25 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Locale {
+  id               Int      @id @default(autoincrement())
+  codeIso          String   @unique @map("code_iso") @db.VarChar(10)
+  nativeName       String   @map("native_name") @db.VarChar(100)
+  englishName      String   @map("english_name") @db.VarChar(100)
+  flag             String?  @db.VarChar(10)
+  isDefault        Boolean  @default(false) @map("is_default")
+  isActive         Boolean  @default(true) @map("is_active")
+  completionStatus Decimal  @default(0) @map("completion_status") @db.Decimal(5, 2)
+  displayOrder     Int      @default(0) @map("display_order")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("locales")
+}
