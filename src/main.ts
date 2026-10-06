@@ -17,12 +17,14 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     credentials: true,
   });
 
-  await app.listen(3001);
-  console.log('🚀 Backend corriendo en http://localhost:3001/api');
+  const port = process.env.PORT ?? 3001;
+
+  await app.listen(port, "0.0.0.0");
+  console.log(`🚀 Backend corriendo en http://localhost:${port}/api`);
 }
 
 bootstrap();
